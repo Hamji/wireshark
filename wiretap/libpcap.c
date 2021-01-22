@@ -38,6 +38,7 @@ typedef struct {
 	void *encap_priv;
 } libpcap_t;
 
+// 캡처파일의 몇몇 부분을 읽으려 시도
 /* Try to read the first few records of the capture file. */
 static int libpcap_try(wtap *wth, int *err, gchar **err_info);
 static int libpcap_try_record(wtap *wth, FILE_T fh, int *err, gchar **err_info);
@@ -54,6 +55,7 @@ static int libpcap_read_header(wtap *wth, FILE_T fh, int *err, gchar **err_info,
     struct pcaprec_ss990915_hdr *hdr);
 static void libpcap_close(wtap *wth);
 
+// libpcap 파일 여는 함수
 wtap_open_return_val libpcap_open(wtap *wth, int *err, gchar **err_info)
 {
 	guint32 magic;
@@ -84,16 +86,19 @@ wtap_open_return_val libpcap_open(wtap *wth, int *err, gchar **err_info)
 	int i;
 	int skip_size = 0;
 	int sizebytes;
-
+		
 	/* Read in the number that should be at the start of a "libpcap" file */
+	// libcap 파일로부터 숫자를 읽는 과정인듯..?
+	
 	if (!wtap_read_bytes(wth->fh, &magic, sizeof magic, err, err_info)) {
 		if (*err != WTAP_ERR_SHORT_READ)
 			return WTAP_OPEN_ERROR;
 		return WTAP_OPEN_NOT_MINE;
 	}
-
+	
+	// magic 에 따라 변수 
 	switch (magic) {
-
+	
 	case PCAP_IXIAHW_MAGIC:
 	case PCAP_IXIASW_MAGIC:
 		skip_size = 1;
@@ -154,12 +159,12 @@ wtap_open_return_val libpcap_open(wtap *wth, int *err, gchar **err_info)
 		modified = FALSE;
 		wth->file_tsprec = WTAP_TSPREC_NSEC;
 		break;
-
+	// 라이브캡 파일이 아닌경우
 	default:
 		/* Not a "libpcap" type we know about. */
 		return WTAP_OPEN_NOT_MINE;
 	}
-
+		
 	/* Read the rest of the header. */
 	if (!wtap_read_bytes(wth->fh, &hdr, sizeof hdr, err, err_info))
 		return WTAP_OPEN_ERROR;
@@ -556,6 +561,7 @@ done:
  */
 #define MAX_RECORDS_TO_TRY	3
 
+// 캡처 파일의 첫번째 ㅁㅁㅁㅁ 부분을 읽는 함수
 /* Try to read the first MAX_RECORDS_TO_TRY records of the capture file. */
 static int libpcap_try(wtap *wth, int *err, gchar **err_info)
 {
@@ -605,6 +611,12 @@ static int libpcap_try(wtap *wth, int *err, gchar **err_info)
    are wrong with the header; this is used by the heuristics that try to
    guess what type of file it is, with the type with the fewest problems
    being chosen. */
+
+// 다음 패킷을 읽는 함수인데 헤더를 맞게 읽었다면 다으 ㅁ패킷을 읽고 맞으면 0 틀리면 양수 혹은 -1 반환
+
+
+
+// 라이브캡이 기록을 읽는 단계 
 static int libpcap_try_record(wtap *wth, FILE_T fh, int *err, gchar **err_info)
 {
 	/*
@@ -612,7 +624,11 @@ static int libpcap_try_record(wtap *wth, FILE_T fh, int *err, gchar **err_info)
 	 */
 	struct pcaprec_ss990915_hdr rec_hdr;
 	int	ret;
-
+	
+	// 먼저 헤더를 읽어준다. 
+	// true 가 반환되면 문제없는거라 ! 연산으로 다음으로 넘어간다 
+	// WTAP_ERR_SHORT_READ이거라면 뭔가 포멧에 안맞는 문제
+	// 그외는 하드에러 
 	if (!libpcap_read_header(wth, fh, err, err_info, &rec_hdr)) {
 		if (*err == 0) {
 			/*
@@ -634,7 +650,8 @@ static int libpcap_try_record(wtap *wth, FILE_T fh, int *err, gchar **err_info)
 		/* Hard error. */
 		return -1;
 	}
-
+	
+	// 만사 오케이면 시작
 	ret = 0;	/* start out presuming everything's OK */
 	switch (wth->file_type_subtype) {
 
@@ -739,7 +756,7 @@ static int libpcap_try_record(wtap *wth, FILE_T fh, int *err, gchar **err_info)
 	/* Success. */
 	return 0;
 }
-
+//본격적으로 읽는 것 
 /* Read the next packet */
 static gboolean libpcap_read(wtap *wth, wtap_rec *rec, Buffer *buf,
     int *err, gchar **err_info, gint64 *data_offset)
